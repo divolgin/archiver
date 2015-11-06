@@ -5,9 +5,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func WriteTar(srcPath string, dest io.Writer) error {
+	return WriteTarExclude(srcPath, dest, nil)
+}
+
+func WriteTarExclude(srcPath string, dest io.Writer, excludeList []string) error {
 	absPath, err := filepath.Abs(srcPath)
 	if err != nil {
 		return err
@@ -32,6 +37,10 @@ func WriteTar(srcPath string, dest io.Writer) error {
 
 		if err != nil {
 			return err
+		}
+
+		if fileIsExcluded(path, excludeList) {
+			return nil
 		}
 
 		return addTarFile(path, relative, tw)
@@ -88,4 +97,13 @@ func addTarFile(path, name string, tw *tar.Writer) error {
 	}
 
 	return nil
+}
+
+func fileIsExcluded(path string, excludeList []string) bool {
+	for _, f := range excludeList {
+		if strings.HasPrefix(path, f) {
+			return true
+		}
+	}
+	return false
 }
