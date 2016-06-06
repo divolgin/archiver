@@ -2,6 +2,7 @@ package extractor
 
 import (
 	"fmt"
+	"io"
 )
 
 type detectableExtractor struct{}
@@ -32,4 +33,8 @@ func (e *detectableExtractor) Extract(src, dest string) error {
 	}
 
 	return nil
+}
+
+func (e *detectableExtractor) ExtractFromReader(inputReader io.Reader, dest string) error {
+	return fmt.Errorf("Not implemented")
 }

@@ -24,7 +24,7 @@ func (e *tgzExtractor) Extract(src, dest string) error {
 
 	switch srcType {
 	case "application/x-gzip":
-		err := extractTgz(src, dest)
+		err := extractTgzFromFile(src, dest)
 		if err != nil {
 			return err
 		}
@@ -35,7 +35,11 @@ func (e *tgzExtractor) Extract(src, dest string) error {
 	return nil
 }
 
-func extractTgz(src, dest string) error {
+func (e *tgzExtractor) ExtractFromReader(inputReader io.Reader, dest string) error {
+	return extractTgzFromReader(inputReader, dest)
+}
+
+func extractTgzFromFile(src, dest string) error {
 	tarPath, err := exec.LookPath("tar")
 
 	if err == nil {
@@ -53,7 +57,11 @@ func extractTgz(src, dest string) error {
 	}
 	defer fd.Close()
 
-	gReader, err := gzip.NewReader(fd)
+	return extractTgzFromReader(fd, dest)
+}
+
+func extractTgzFromReader(inputReader io.Reader, dest string) error {
+	gReader, err := gzip.NewReader(inputReader)
 	if err != nil {
 		return err
 	}
