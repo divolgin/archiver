@@ -8,11 +8,16 @@ import (
 	"strings"
 )
 
-func WriteTar(srcPath string, dest io.Writer) error {
-	return WriteTarExclude(srcPath, dest, nil)
+type Tar struct {
+	ExcludeList       []string
+	TruncateLongFiles bool // Set this to true to prevent "write too long" errors
 }
 
-func WriteTarExclude(srcPath string, dest io.Writer, excludeList []string) error {
+func WriteTar(srcPath string, dest io.Writer) error {
+	return Tar{}.writeTar(srcPath, dest)
+}
+
+func (t Tar) writeTar(srcPath string, dest io.Writer) error {
 	absPath, err := filepath.Abs(srcPath)
 	if err != nil {
 		return err
@@ -39,17 +44,17 @@ func WriteTarExclude(srcPath string, dest io.Writer, excludeList []string) error
 			return err
 		}
 
-		if fileIsExcluded(path, excludeList) {
+		if t.fileIsExcluded(path) {
 			return nil
 		}
 
-		return addTarFile(path, relative, tw)
+		return t.addTarFile(path, relative, tw)
 	})
 
 	return err
 }
 
-func addTarFile(path, name string, tw *tar.Writer) error {
+func (t Tar) addTarFile(path, name string, tw *tar.Writer) error {
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return err
@@ -90,7 +95,11 @@ func addTarFile(path, name string, tw *tar.Writer) error {
 
 		defer file.Close()
 
-		_, err = io.Copy(tw, file)
+		if t.TruncateLongFiles {
+			_, err = io.CopyN(tw, file, hdr.Size)
+		} else {
+			_, err = io.Copy(tw, file)
+		}
 		if err != nil {
 			return err
 		}
@@ -99,8 +108,8 @@ func addTarFile(path, name string, tw *tar.Writer) error {
 	return nil
 }
 
-func fileIsExcluded(path string, excludeList []string) bool {
-	for _, f := range excludeList {
+func (t Tar) fileIsExcluded(path string) bool {
+	for _, f := range t.ExcludeList {
 		if strings.HasPrefix(path, f) {
 			return true
 		}

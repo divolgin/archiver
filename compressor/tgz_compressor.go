@@ -6,21 +6,23 @@ import (
 )
 
 type Compressor interface {
+	SetTarConfig(config Tar)
 	Compress(src string, dst string) error
-	CompressExclude(src string, dest string, excludeList []string) error
 }
 
 func NewTgz() Compressor {
 	return &tgzCompressor{}
 }
 
-type tgzCompressor struct{}
-
-func (compressor *tgzCompressor) Compress(src string, dest string) error {
-	return compressor.CompressExclude(src, dest, nil)
+type tgzCompressor struct {
+	tar Tar
 }
 
-func (compressor *tgzCompressor) CompressExclude(src string, dest string, excludeList []string) error {
+func (compressor *tgzCompressor) SetTarConfig(config Tar) {
+	compressor.tar = config
+}
+
+func (compressor *tgzCompressor) Compress(src string, dest string) error {
 	fw, err := os.Create(dest)
 	if err != nil {
 		return err
@@ -30,5 +32,5 @@ func (compressor *tgzCompressor) CompressExclude(src string, dest string, exclud
 	gw := gzip.NewWriter(fw)
 	defer gw.Close()
 
-	return WriteTarExclude(src, gw, excludeList)
+	return compressor.tar.writeTar(src, gw)
 }
